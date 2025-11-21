@@ -50,19 +50,19 @@ It provides dedicated dashboards for **Company, Admin, and Employees**, supporti
 Here’s a quick look at the platform interface:
 
 <p align="center">
-  <img src="/public/img (2).png" width="90%" alt="Homepage Screenshot" />
+  <img src="/public/img1 (5).png" width="90%" alt="Homepage Screenshot" />
 </p>
 
 <p align="center">
-  <img src="/public/read1 (3).png" width="90%" alt="Product Page Screenshot" />
+  <img src="/public/img1 (4).png" width="90%" alt="Product Page Screenshot" />
 </p>
 
 <p align="center">
-  <img src="/public/img1 (4).png" width="90%" alt="Admin Panel Screenshot" />
+  <img src="/public/img1 (2).png" width="90%" alt="Admin Panel Screenshot" />
 </p>
 
 <p align="center">
-  <img src="/public/img1 (5).png" width="90%" alt="Admin Panel Screenshot" />
+  <img src="/public/img1 (3).png" width="90%" alt="Admin Panel Screenshot" />
 </p>
 
 ---
