@@ -1,0 +1,241 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/////////////////////////////////////////////////////
+// Company Model
+/////////////////////////////////////////////////////
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Company login password
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  admins    Admin[]
+  employees Employee[]
+  projects  Project[]
+  tasks     Task[]
+  teams     Team[]
+  chats     Chat[]
+  files     File[]
+
+  @@index([name])
+  @@index([email])
+}
+
+/////////////////////////////////////////////////////
+// Admin Model
+/////////////////////////////////////////////////////
+model Admin {
+  id         String  @id @default(uuid())
+  name       String
+  email      String  @unique
+  password   String
+  role       String? @default("admin")
+  company_id String
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  tasks   Task[]
+  uploads File[]
+  teamMembers TeamMember[] @relation("TeamMembers")
+  createdTeams Team[] @relation("TeamCreator")
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Employee  Employee[]
+  Project   Project[]
+
+  @@index([company_id])
+  @@index([email])
+}
+
+/////////////////////////////////////////////////////
+// Employee Model
+/////////////////////////////////////////////////////
+model Employee {
+  id         String  @id @default(uuid())
+  name       String
+  email      String  @unique
+  password   String
+  work_id    String?
+  company_id String
+  admin_id   String?
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  admin   Admin?  @relation(fields: [admin_id], references: [id], onDelete: SetNull)
+  tasks   Task[]
+  teamMembers TeamMember[] @relation("TeamMembers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([company_id])
+  @@index([admin_id])
+  @@index([email])
+  @@index([work_id])
+}
+
+/////////////////////////////////////////////////////
+// Team Model
+/////////////////////////////////////////////////////
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  company_id  String
+  admin_id    String?  // Admin who created the team
+
+  company  Company    @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  admin    Admin?     @relation("TeamCreator", fields: [admin_id], references: [id], onDelete: SetNull)
+  members  TeamMember[]
+  tasks    Task[]
+  chats    Chat[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([company_id])
+  @@index([admin_id])
+}
+
+/////////////////////////////////////////////////////
+// Team Member Model
+/////////////////////////////////////////////////////
+model TeamMember {
+  id         String   @id @default(uuid())
+  team_id    String
+  admin_id   String?
+  employee_id String?
+
+  team     Team     @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  admin    Admin?   @relation("TeamMembers", fields: [admin_id], references: [id], onDelete: Cascade)
+  employee Employee? @relation("TeamMembers", fields: [employee_id], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([team_id, admin_id])
+  @@unique([team_id, employee_id])
+  @@index([team_id])
+}
+
+/////////////////////////////////////////////////////
+// Project Model
+/////////////////////////////////////////////////////
+model Project {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  company_id  String
+  admin_id    String
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  admin   Admin   @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([company_id])
+  @@index([admin_id])
+}
+
+/////////////////////////////////////////////////////
+// Task Model
+/////////////////////////////////////////////////////
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("pending")
+  priority    String    @default("medium") // low, medium, high
+  deadline    DateTime?
+  project_id  String?
+  company_id  String
+  admin_id    String
+  employee_id String?
+  team_id     String?
+
+  company  Company   @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  admin    Admin     @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employee_id], references: [id], onDelete: SetNull)
+  project  Project?  @relation(fields: [project_id], references: [id], onDelete: SetNull)
+  team     Team?     @relation(fields: [team_id], references: [id], onDelete: SetNull)
+
+  files File[]
+  chats Chat[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([company_id])
+  @@index([admin_id])
+  @@index([employee_id])
+  @@index([project_id])
+  @@index([team_id])
+}
+
+/////////////////////////////////////////////////////
+// File Model
+/////////////////////////////////////////////////////
+model File {
+  id          String  @id @default(uuid())
+  file_url    String // e.g., S3 or local storage path
+  file_type   String? // pdf, docx, txt, etc.
+  file_name   String?
+  file_size   Int?
+  task_id     String?
+  uploader_id String?
+  company_id  String
+
+  task     Task?   @relation(fields: [task_id], references: [id], onDelete: SetNull)
+  admin    Admin?  @relation(fields: [uploader_id], references: [id], onDelete: SetNull)
+  company  Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  uploadedAt DateTime @default(now())
+
+  @@index([task_id])
+  @@index([uploader_id])
+  @@index([company_id])
+}
+
+/////////////////////////////////////////////////////
+// Chat Model (Unified for Personal, Group, Team chats)
+/////////////////////////////////////////////////////
+model Chat {
+  id            String   @id @default(uuid())
+  message       String   @db.Text
+  chat_type     String   // "personal", "group", "team", "task"
+  company_id    String
+  sender_id     String   // Admin or Employee ID
+  sender_type   String   // "admin" or "employee"
+  receiver_id   String?  // For personal chats (Admin or Employee ID)
+  receiver_type String?  // "admin" or "employee"
+  team_id       String?  // For team chats
+  task_id       String?  // For task chats
+  is_read       Boolean  @default(false)
+  read_at       DateTime?
+
+  company  Company   @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  team     Team?     @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  task     Task?     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([company_id])
+  @@index([sender_id])
+  @@index([receiver_id])
+  @@index([team_id])
+  @@index([task_id])
+  @@index([chat_type])
+  @@index([sender_type])
+}
